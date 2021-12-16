@@ -1,7 +1,10 @@
 {
-  "name": "Login with token",
-  "provider": "SAP FSM",
-  "description": "Sample extension to demo login with token",   
-  "version": "1.0.0", 
-  "icon": "https://raw.githubusercontent.com/SAP-samples/fsm-extension-sample/refactor/samples/login-with-token/frontend/icon.png"
+  "name": "knowledge-search",
+  "provider": "SAP SE",
+  "description": "Search Wikipedia for articles",
+  "version": "1.0.3",
+  "icon": "https://wiki-knowledge.cfapps.sap.hana.ondemand.com/assets/IconKnowledge.png",
+  "useShellSDK": true,
+  "parameters": [],
+  "outletPositions": ["WFM_ACTIVITY_SIDEBAR"]
 }

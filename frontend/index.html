@@ -1,76 +1,267 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <title>login with token</title>
-  <link href="https://unpkg.com/fundamental-styles" rel="stylesheet">
-</head>
-<body>
-  <div id="show-if-not-inside-shell" style="display: none;">
-    <div class="fd-panel fd-panel--fixed">
-      <div class="fd-panel__header">
-        <h4 class="fd-panel__title">Your extension is running as expected</h4>
-      </div>
-      <div role="region" aria-labelledby="jhqDKYrt" class="fd-panel__content">
-        <p>Thanks for running <strong>login-with-token</strong> sample from our <a href="https://github.com/SAP-samples/fsm-extension-sample">fsm-extension-sample</a> repository.</p>
-        <p>This extension has been designed to run within SAP Field Service Management and now needs to be installed as describe within the <a href="https://help.sap.com/viewer/fsm_extensions/LATEST/en-US/overview.html">FSM Help Portal - Extensions</a>.</p>
-      </div>
-    </div>
-  </div>
-  <script src="https://unpkg.com/fsm-shell"></script>
+  <title>Knowledge Base Lookup</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/systemjs/4.1.0/system.min.js"
+          integrity="sha256-i+j3ZmMaI9nPuzasKbNrT3evNnUewPBf5p9UEJdr2zA=" crossorigin="anonymous"></script>
   <script>
-    const { ShellSdk, SHELL_EVENTS } = FSMShell;
-    // Init ShellSDk
-    const shellSdk = ShellSdk.init(window.parent, '*');
-
-    if (!ShellSdk.isInsideShell()) {
-      document.getElementById('show-if-not-inside-shell').style.display = "block";
-    } else if (sessionStorage.getItem('token')) {
-      window.location.href = '/me.html';
-    } else {
-
-      shellSdk.emit(SHELL_EVENTS.Version1.REQUIRE_CONTEXT, {
-        clientIdentifier: 'login-with-token',
-        auth: {
-          response_type: 'token'  // request a user token within the context
+    const getJson = function(url, callback) {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.responseType = 'json';
+      xhr.onload = function() {
+        const status = xhr.status;
+        if (status === 200) {
+          callback(null, xhr.response);
+        } else {
+          callback(status, xhr.response);
         }
-      });
+      };
+      xhr.send();
+    };
 
-      shellSdk.on(SHELL_EVENTS.Version1.REQUIRE_CONTEXT, async (event) => {
-        
-        const {
-          cloudHost,
-          account,
-          companyId,
-          userId,
-          auth
-        } = JSON.parse(event);
+    const updateUI = text => document.querySelectorAll('#knowledgeBase')[0].innerHTML = text;
 
-        fetch('/auth/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + auth.access_token,
-            'cloudHost': cloudHost,
-            'account': account,
-            'companyId': companyId,
-            'userId': userId
+    function showSearchBar() {
+      updateUI('');
+
+      const searchDiv = document.createElement("div");
+      searchDiv.setAttribute("class", "searchDiv");
+
+      const input = document.createElement("input");
+      input.setAttribute("id", "search");
+      input.setAttribute("type", "text");
+      input.setAttribute("placeholder", "Search article ...");
+      searchDiv.appendChild(input);
+
+      const button = document.createElement("button");
+      button.setAttribute("type", "button");
+      button.innerText = `Search`;
+      button.setAttribute("class", "searchButton");
+      button.setAttribute("onClick", "searchArticles()");
+      searchDiv.appendChild(button);
+
+      const clearDiv = document.createElement("div");
+      clearDiv.setAttribute("class", "clearDiv");
+      searchDiv.appendChild(clearDiv);
+
+      const resultList = document.createElement("div");
+      resultList.setAttribute("id", "resultList");
+
+      document.querySelectorAll('#knowledgeBase')[0].appendChild(searchDiv);
+      document.querySelectorAll('#knowledgeBase')[0].appendChild(resultList);
+    }
+
+    function searchArticles() {
+      const searchString = document.getElementById('search').value;
+      if (searchString) {
+        const search = encodeURI(searchString);
+        removeResults();
+        addLoadingSpinner(document.getElementById('resultList'));
+        getJson(`https://cors-anywhere.herokuapp.com/https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${search}&format=json`, (err, results) => {
+          if (err !== null) {
+            console.warn('Something went wrong: ' + err);
+          } else {
+            listResults(results.query.search);
+            removeLoadingSpinner();
           }
-        })
-        .then(response => response.json())
-        .then(function(data) {
-            if (data.token) {
-              sessionStorage.setItem('token', data.token);
-              window.location.href = '/me.html';
-            } else {
-              window.location.href = '/configure.html';
-            }
-        })
-        .catch(function(exception) {
-          alert(exception.message || 'An unknown error occured');
         });
-      });
+      } else {
+        removeResults();
+      }
+    }
+
+    function addLoadingSpinner(element) {
+      const loadingSpinner = document.createElement("div");
+      loadingSpinner.setAttribute("id", "spinner");
+      loadingSpinner.setAttribute("class", "lds-ripple");
+
+      const div1 = document.createElement("div");
+      const div2 = document.createElement("div");
+
+      loadingSpinner.appendChild(div1);
+      loadingSpinner.appendChild(div2);
+
+      element.appendChild(loadingSpinner);
+    }
+
+    function removeLoadingSpinner() {
+      const spinner = document.getElementById("spinner");
+      if (spinner) {
+        spinner.remove();
+      }
+    }
+
+    function removeResults() {
+      const resultCards = document.querySelectorAll('.card');
+      if (resultCards) {
+        resultCards.forEach(card => {
+          card.remove();
+        });
+      }
+    }
+
+    function listResults(results) {
+      results.forEach(result => {
+        createResultCard(result);
+      })
+    }
+
+    function createResultCard(result) {
+      const card = document.createElement("div");
+      card.setAttribute("class", "card");
+
+      const cardTitle = document.createElement("div");
+      cardTitle.setAttribute("class", "cardTitle");
+      cardTitle.innerHTML = `${result.title}`;
+      card.appendChild(cardTitle);
+
+      const cardDesc = document.createElement("div");
+      cardDesc.setAttribute("class", "cardDesc");
+      cardDesc.innerHTML = `${result.snippet}...`;
+      card.appendChild(cardDesc);
+
+      const cardLink = document.createElement("div");
+      cardLink.setAttribute("class", "cardLink");
+      cardLink.innerHTML = `<a href="https://en.wikipedia.org/?curid=${result.pageid}" target="_blank" rel="noopener noreferrer">Visit article</a>`;
+      card.appendChild(cardLink);
+
+      document.getElementById('resultList').appendChild(card);
     }
   </script>
+  <style>
+    body {
+      margin: 0px;
+      padding: 0px;
+    }
+
+    #knowledgeBase {
+      padding: 16px 24px 16px 16px;
+      text-align: center;
+    }
+
+    .searchDiv {
+      text-align: left;
+    }
+
+    .searchDiv input {
+      float: left;
+      width: 150px;
+    }
+
+    .clearDiv {
+      clear: both;
+    }
+
+    .searchButton {
+      float: right;
+    }
+
+    #resultList {
+      margin-top: 16px;
+    }
+
+    .card {
+      text-align: left;
+      font-family: Arial;
+      font-size: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #dddddd;
+    }
+
+    .cardTitle {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .cardDesc {
+      margin-bottom: 4px;
+    }
+
+    .searchmatch {
+      background-color: yellow;
+    }
+
+    /* Loading Spinner */
+    /* --------------- */
+    .lds-ripple {
+      display: inline-block;
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+    .lds-ripple div {
+      position: absolute;
+      border: 4px solid #dddddd;
+      opacity: 1;
+      border-radius: 50%;
+      animation: lds-ripple 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+    .lds-ripple div:nth-child(2) {
+      animation-delay: -0.5s;
+    }
+    @keyframes lds-ripple {
+      0% {
+        top: 36px;
+        left: 36px;
+        width: 0;
+        height: 0;
+        opacity: 1;
+      }
+      100% {
+        top: 0px;
+        left: 0px;
+        width: 72px;
+        height: 72px;
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div>
+  <div id="knowledgeBase"></div>
+</div>
+
+<script>
+  async function main() {
+    updateUI('Loading...');
+
+    // get latest sdk
+    const { ShellSdk, SHELL_EVENTS } = await System.import('https://unpkg.com/fsm-shell').then(m => m.default);
+
+    console.log('using ShellSdk version', ShellSdk.VERSION);
+
+    if (!ShellSdk.isInsideShell()) {
+      throw new Error('unable to reach shell eventAPI');
+    }
+
+    const shellSdk = ShellSdk.init(parent, '*');
+
+    // get context
+    shellSdk.emit(SHELL_EVENTS.Version1.REQUIRE_CONTEXT, { clientIdentifier: 'example-plugin' });
+    shellSdk.on(SHELL_EVENTS.Version1.REQUIRE_CONTEXT, event => {
+      const {
+        account,
+        accountId,
+        company,
+        companyId,
+        user,
+        userId,
+        selectedLocale
+      } = JSON.parse(event);
+      showSearchBar();
+    });
+  }
+
+  main().catch(e => (console.error(e), showSearchBar()));
+</script>
+
 </body>
+
 </html>
