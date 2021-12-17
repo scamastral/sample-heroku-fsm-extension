@@ -1,4 +1,4 @@
-# Login with token extension sample
+# Dummy Extension for Heroku deployment test (Based on Wiki Knowledge Demo extension)
 
 Minimalist example to demo the deployment to heroku.
 
